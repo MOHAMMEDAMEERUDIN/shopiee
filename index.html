@@ -1,0 +1,381 @@
+<Html>
+
+<head>
+   <title>
+      E-Commerce Online shopping
+   </title>
+   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+   <style>
+      body {
+         background-color: Lightskyblue
+      }
+
+      #productTable,
+      #cartTable {
+         font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+         border-collapse: collapse;
+         width: 100%;
+      }
+
+      #productTable td,
+      #productTable th,
+      #cartTable td,
+      #cartTable th {
+         border: 1px solid #ddd;
+         padding: 8px;
+      }
+
+      #productTable tr,
+      #cartTable tr {
+         background-color: #f2f2f2;
+      }
+
+      #productTable th,
+      #cartTable th {
+         padding-top: 12px;
+         padding-bottom: 12px;
+         text-align: left;
+         background-color: #4CAF50;
+         color: white;
+      }
+   </style>
+</head>
+
+<body bgcolor="Lightskyblue">
+   <br>
+   <br>
+   <div id="reg">
+      <h3>Registration Page</h3>
+      <form>
+
+         <label>
+            Name :
+         </label>
+         <input type="text" id="name" /> <br> <br>
+         <label>
+            Phone :
+         </label>
+         <input type="text" id="mobile" /> <br> <br>
+         <label>
+            Email :
+         </label>
+         <input type="text" id="email" /> <br> <br>
+         <label>
+            Password :
+         </label>
+         <input type="password" id="password" /> <br> <br>
+      </form>
+
+      <input type="submit" class="btn btn-default" onclick="saveUser()" />
+
+      <div id="status"></div>
+      <input type="submit" onclick="startShopping()" class="btn btn-default" id="proceedToStore"
+         value="Start Shopping >>>" />
+
+
+   </div>
+   <div id="shop">
+      <h3>Shopping</h3>
+
+      <input type="submit" onclick="showCart()" class="btn btn-success cartBtn" id="mycart" style="float:right"
+         value="Show my Cart Items" />
+      <input type="submit" onclick="startShopping()" class="btn btn-default cartBtnOption" style="float:right"
+         value="<<< Back to Shopping" />
+      <input type="submit" onclick="removeAllFromCart()" class="btn btn-danger cartBtnOption" style="float:right"
+         value="Clear Cart" />
+
+
+      <table id="productTable">
+         <tr>
+            <th>Id</th>
+            <th>Product Name</th>
+            <th>Product Price</th>
+            <th>Action</th>
+         </tr>
+
+      </table>
+
+      <table id="cartTable">
+         <tr>
+            <th>SI No.</th>
+            <th>Product Name</th>
+            <th>Product Price</th>
+            <th>Action</th>
+         </tr>
+
+      </table>
+
+   </div>
+
+   <div id="checkout">
+      <h3 id="orderInfo" style="color:red; text-align:center">
+         <h3>
+   </div>
+   <script>
+
+
+      function saveUser() {
+         var mobilepattern = new RegExp(/^[0-9-+]+$/);    // regular expression pattern
+         var mobile = mobilepattern.test($("#mobile").val());
+
+         var emailpattern = new RegExp(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/);    // regular expression pattern
+         var email = emailpattern.test($("#email").val());
+
+         if (mobile && email) {
+            var user = {
+               name: $("#name").val(),
+               mobile: $("#mobile").val(),
+               email: $("#email").val(),
+               password: $("#password").val()
+            }
+
+
+            $('#status').html('Please Wait..');
+            $.ajax({
+               url: 'http://localhost:8080/EStore//user/register',
+               type: 'post',
+               dataType: 'json',
+               contentType: 'application/json',
+               data: JSON.stringify(user),
+               success: function (status) {
+                  if (status) {
+                     $('#status').html("Registered Succesfully");
+                     $('#proceedToStore').show();
+                  } else {
+                     $('#status').html("User Already Exists");
+                     $('#proceedToStore').show();
+                  }
+
+                  localStorage.setItem('currentuser', $("#email").val())
+
+               }
+
+            });
+         } else {
+            $('#status').html("Invalid Inputs Email or Mobile");
+         }
+
+
+
+      }
+
+      function startShopping() {
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//product/getAllProducts',
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (data) {
+               if (data) {
+                  $('#reg').hide();
+                  $('#shop').show();
+                  $('#productTable').show();
+                  $('#cartTable').hide();
+                  var table = document.getElementById("productTable");
+                  $("#productTable").find("tr:gt(0)").remove();
+                  for (var i = 1; i <= data.length; i++) {
+                     var row = table.insertRow(i);
+                     var product = data[i - 1];
+                     var cell1 = row.insertCell(0);
+                     var cell2 = row.insertCell(1);
+                     var cell3 = row.insertCell(2);
+                     var cell4 = row.insertCell(3);
+
+                     cell1.innerHTML = product.productId;
+                     cell2.innerHTML = product.productName;
+                     cell3.innerHTML = "Rs." + product.price;
+                     cell4.innerHTML = '<input type="submit" onclick="addToCart(\'' + product.pk + '\')" class="btn btn-success" value="Add to Cart"/>';
+
+                  }
+
+               } else {
+                  $('#status').html("Something went wrong");
+               }
+               $(".cartBtnOption").hide();
+               $(".cartBtn").show();
+
+            }
+
+         });
+      }
+
+      function addToCart(productid) {
+         var currentuser = localStorage.getItem("currentuser");
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//cart/add/' + currentuser + "/" + productid,
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (status) {
+               if (status) {
+                  alert("Product Added Successfully!");
+
+               } else {
+                  alert("Error occured while adding cart!");
+               }
+            }
+
+         });
+      }
+
+      function showCart() {
+         var currentuser = localStorage.getItem("currentuser");
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//cart/getAllCartItems/' + currentuser,
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (data) {
+               if (data) {
+                  $('#reg').hide();
+                  $('#shop').show();
+                  $('#productTable').hide();
+                  $('#cartTable').show();
+                  var table = document.getElementById("cartTable");
+                  $("#cartTable").find("tr:gt(0)").remove();
+                  var totalPrice = 0;
+                  for (var i = 1; i <= data.length; i++) {
+                     var row = table.insertRow(i);
+                     var product = data[i - 1];
+                     totalPrice = totalPrice + product.price;
+                     var cell1 = row.insertCell(0);
+                     var cell2 = row.insertCell(1);
+                     var cell3 = row.insertCell(2);
+                     var cell4 = row.insertCell(3);
+
+                     cell1.innerHTML = i;
+                     cell2.innerHTML = product.productName;
+                     cell3.innerHTML = "Rs." + product.price;
+                     cell4.innerHTML = '<input type="submit" onclick="removeFromCart(\'' + product.pk + '\')" class="btn btn-danger" value="Remove Item"/>';
+
+                  }
+                  var row = table.insertRow(data.length + 1);
+                  var cell1 = row.insertCell(0);
+                  var cell2 = row.insertCell(1);
+                  var cell3 = row.insertCell(2);
+                  var cell4 = row.insertCell(3);
+                  cell1.innerHTML = "<h3>Total</h3>";
+                  cell2.innerHTML = "<h3>" + data.length + " Items</h3>";
+                  cell3.innerHTML = "<h3>Rs." + totalPrice + "</h3>";
+                  cell4.innerHTML = '<input type="submit" onclick="checkout()" class="btn btn-success" value="Checkout & Pay"/>';
+
+
+               } else {
+                  $('#status').html("Something went wrong");
+               }
+               $(".cartBtnOption").show();
+               $(".cartBtn").hide();
+            }
+
+         });
+      }
+
+      function removeFromCart(productid) {
+         var currentuser = localStorage.getItem("currentuser");
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//cart/removeSelectedItem/' + currentuser + "/" + productid,
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (data) {
+               if (data) {
+                  $('#reg').hide();
+                  $('#shop').show();
+                  $('#productTable').hide();
+                  $('#cartTable').show();
+                  var table = document.getElementById("cartTable");
+                  $("#cartTable").find("tr:gt(0)").remove();
+                  var totalPrice = 0;
+                  for (var i = 1; i <= data.length; i++) {
+                     var row = table.insertRow(i);
+                     var product = data[i - 1];
+                     totalPrice = totalPrice + product.price;
+                     var cell1 = row.insertCell(0);
+                     var cell2 = row.insertCell(1);
+                     var cell3 = row.insertCell(2);
+                     var cell4 = row.insertCell(3);
+
+                     cell1.innerHTML = i;
+                     cell2.innerHTML = product.productName;
+                     cell3.innerHTML = "Rs." + product.price;
+                     cell4.innerHTML = '<input type="submit" onclick="removeFromCart(\'' + product.pk + '\')" class="btn btn-danger" value="Remove Item"/>';
+
+                  }
+                  var row = table.insertRow(data.length + 1);
+                  var cell1 = row.insertCell(0);
+                  var cell2 = row.insertCell(1);
+                  var cell3 = row.insertCell(2);
+                  var cell4 = row.insertCell(3);
+                  cell1.innerHTML = "<h3>Total</h3>";
+                  cell2.innerHTML = "<h3>" + data.length + " Items</h3>";
+                  cell3.innerHTML = "<h3>Rs." + totalPrice + "</h3>";
+                  cell4.innerHTML = '<input type="submit" onclick="checkout()" class="btn btn-success" value="Checkout & Pay"/>';
+
+               } else {
+                  alert("Something went wrong");
+               }
+            }
+
+         });
+      }
+
+      function removeAllFromCart() {
+         var currentuser = localStorage.getItem("currentuser");
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//cart/removeAllCartItems/' + currentuser,
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (status) {
+               if (status) {
+                  $("#cartTable").find("tr:gt(0)").remove();
+                  alert("Your cart becomes Empty! Shop to add more");
+
+               } else {
+                  alert("Error occured while Clearing cart!");
+               }
+            }
+
+         });
+      }
+
+      function checkout() {
+         var currentuser = localStorage.getItem("currentuser");
+
+         $.ajax({
+            url: 'http://localhost:8080/EStore//checkout/proceed/' + currentuser,
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (status) {
+               if (status) {
+                  $('#reg').hide();
+                  $('#shop').hide();
+                  $('#checkout').show();
+
+                  $('#orderInfo').html('Thanks for placing your order');
+
+               } else {
+
+                  alert("An Error occured in server!");
+               }
+            }
+
+         });
+      }
+
+      $(document).ready(function () {
+
+         $('#proceedToStore').hide();
+         $('#shop').hide();
+
+      });
+   </script>
+</body>
